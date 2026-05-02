@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Watchlist — Mini Letterboxd</title>
+<link rel="stylesheet" href="/static/style.css">
+<script>const t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t);</script>
+</head>
+<body>
+<header>
+  <a href="/" class="logo">🎬 Mini<span>Letterboxd</span></a>
+  <nav>
+    <a href="/">Home</a><a href="/myreviews">Diary</a><a href="/watchlist" class="active">Watchlist</a>
+    <a href="/analytics">Stats</a>
+    <a href="/profile" class="nav-avatar" style="background:{{ user_data.avatar_color or '#e8a020' }}">{{ session.user[0].upper() }}</a>
+    <a href="/logout">Logout</a>
+    <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()">☀️</button>
+  </nav>
+</header>
+<div class="diary-header">
+  <h1>Watchlist</h1>
+  <p>{{ items|length }} film{% if items|length != 1 %}s{% endif %} saved.</p>
+</div>
+{% if items %}
+<div class="watchlist-grid">
+  {% for item in items %}
+  <div class="watchlist-item" onclick="window.location='/movie/{{ item[0] }}'">
+    <img src="{{ item[2] if item[2] and item[2] != 'N/A' else '/static/noimage.png' }}" alt="{{ item[1] }}" loading="lazy">
+    <button class="remove-watchlist" onclick="event.stopPropagation();removeFromWatchlist('{{ item[0] }}',this)" title="Remove">✕</button>
+    <div class="watchlist-item-info">
+      <div class="watchlist-item-title">{{ item[1] or 'Unknown' }}</div>
+      <div class="watchlist-item-year">{{ item[3] or '' }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">🎞</div><h3>Your watchlist is empty</h3>
+  <p>Save films from the <a href="/">homepage</a> or any movie page.</p>
+</div>
+{% endif %}
+<script src="/static/script.js"></script>
+</body></html>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>My Diary — Mini Letterboxd</title>
+<link rel="stylesheet" href="/static/style.css">
+<script>const t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t);</script>
+</head>
+<body>
+<header>
+  <a href="/" class="logo">🎬 Mini<span>Letterboxd</span></a>
+  <nav>
+    <a href="/">Home</a><a href="/myreviews" class="active">Diary</a><a href="/watchlist">Watchlist</a>
+    <a href="/analytics">Stats</a>
+    <a href="/profile" class="nav-avatar" style="background:{{ user_data.avatar_color or '#e8a020' }}">{{ session.user[0].upper() }}</a>
+    <a href="/logout">Logout</a>
+    <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()">☀️</button>
+  </nav>
+</header>
+<div class="diary-header">
+  <h1>{{ username }}'s Diary</h1>
+  <p>Your film log, sorted by date.</p>
+</div>
+{% if movies %}
+  {% set cur = namespace(month='') %}
+  {% for m in movies %}
+    {% set month = m.date[:7] if m.date else 'Unknown' %}
+    {% if month != cur.month %}
+      {% if not loop.first %}</div>{% endif %}
+      {% set cur.month = month %}
+      <div class="diary-month-group">
+        <div class="diary-month-label">
+          {% if m.date %}{{ m.date[:4] }} · {{ ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m.date[5:7]|int-1] }}
+          {% else %}Unknown Date{% endif %}
+        </div>
+    {% endif %}
+    <div class="diary-entry" onclick="window.location='/movie/{{ m.movie_id }}'" style="cursor:pointer">
+      <img src="{{ m.poster if m.poster and m.poster != 'N/A' else '/static/noimage.png' }}" alt="{{ m.title }}">
+      <div class="diary-entry-info">
+        <div class="diary-entry-title">{{ m.title or 'Unknown Title' }}</div>
+        <div class="diary-entry-stars">
+          {% if m.rating and m.rating|int > 0 %}
+            {% for i in range(m.rating|int) %}★{% endfor %}{% for i in range(5-m.rating|int) %}☆{% endfor %}
+            <span style="color:var(--muted);font-size:11px;margin-left:4px">{{ m.rating }}/5</span>
+          {% else %}<span class="diary-unrated">Logged without rating</span>{% endif %}
+        </div>
+        {% if m.review %}<div class="diary-entry-review">{{ m.review }}</div>{% endif %}
+        <div class="diary-entry-date">{{ m.date[:10] if m.date else '' }}</div>
+      </div>
+    </div>
+  {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state">
+    <div class="empty-icon">📖</div><h3>Your diary is empty</h3>
+    <p>Start logging films. <a href="/">Browse movies →</a></p>
+  </div>
+{% endif %}
+<script src="/static/script.js"></script>
+</body></html>

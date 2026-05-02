@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>{{ movie.Title }} — Mini Letterboxd</title>
+<link rel="stylesheet" href="/static/style.css">
+<script>const t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t);</script>
+</head>
+<body>
+<header>
+  <a href="/" class="logo">🎬 Mini<span>Letterboxd</span></a>
+  <nav>
+    <a href="/">Home</a><a href="/advanced-search">Search</a>
+    <a href="/myreviews">Diary</a><a href="/watchlist">Watchlist</a><a href="/analytics">Stats</a>
+    {% if session.user %}
+      <a href="/profile" class="nav-avatar" style="background:{{ user_data.avatar_color or '#e8a020' }}">{{ session.user[0].upper() }}</a>
+      <a href="/logout">Logout</a>
+    {% else %}<a href="/login">Login</a>{% endif %}
+    <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()">☀️</button>
+  </nav>
+</header>
+
+<div class="movie-hero">
+  <div class="movie-hero-backdrop" style="background-image:url('{{ movie.Backdrop }}')"></div>
+  <div class="movie-hero-content">
+    <img src="{{ movie.Poster }}" alt="{{ movie.Title }}">
+    <div class="movie-hero-info">
+      <h1>{{ movie.Title }}</h1>
+      <div class="movie-meta-row">
+        {% if movie.imdbRating and movie.imdbRating != 'N/A' %}
+        <span class="meta-pill rating-pill">⭐ {{ movie.imdbRating }}/10</span>{% endif %}
+        {% if movie.Year %}<span class="meta-pill">{{ movie.Year }}</span>{% endif %}
+        {% if movie.Runtime %}<span class="meta-pill">{{ movie.Runtime }}</span>{% endif %}
+        {% if movie.Genre %}
+          {% for g in movie.Genre.split(',') %}<span class="meta-pill">{{ g.strip() }}</span>{% endfor %}
+        {% endif %}
+      </div>
+      <p class="movie-plot">{{ movie.Overview }}</p>
+      {% if movie.Director %}
+      <p style="font-size:13px;color:var(--muted);margin-top:9px">
+        Directed by <span style="color:var(--text)">{{ movie.Director }}</span></p>{% endif %}
+      {% if movie.Cast %}
+      <p style="font-size:13px;color:var(--muted);margin-top:5px">
+        Starring <span style="color:var(--text)">{{ movie.Cast }}</span></p>{% endif %}
+      <button class="watchlist-btn {% if in_watchlist %}active{% endif %}"
+        onclick="toggleWatchlist('{{ movie.imdbID }}','{{ movie.Title|replace("'","") }}','{{ movie.Poster }}','{{ movie.Year }}',this)">
+        {% if in_watchlist %}✓ In Watchlist{% else %}+ Watchlist{% endif %}
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="movie-review-section">
+  {% if session.user %}
+  <div class="write-review-box">
+    <h3>Log this film</h3>
+    <form onsubmit="submitReview(event,this)">
+      <input type="hidden" name="movie_id"     value="{{ movie.imdbID }}">
+      <input type="hidden" name="movie_title"  value="{{ movie.Title }}">
+      <input type="hidden" name="movie_poster" value="{{ movie.Poster }}">
+      <input type="hidden" name="movie_genre"  value="{{ movie.Genre }}">
+      <div class="stars" data-selected="0"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div>
+      <input type="hidden" name="rating" value="0">
+      <input type="text" name="review" placeholder="Write your review…"
+        style="margin-top:10px;padding:10px 13px;width:100%;border:1px solid var(--border);border-radius:8px;background:var(--input-bg);color:var(--white);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;">
+      <button type="submit" class="submit-btn" style="margin-top:8px">Save to Diary</button>
+      <button type="button" class="log-only-btn" style="margin-top:5px" onclick="logOnly(this)">Just log it (no rating)</button>
+    </form>
+  </div>
+  {% else %}
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:22px;text-align:center;">
+    <p style="color:var(--muted);font-size:14px"><a href="/login" style="color:var(--amber);text-decoration:none">Login</a> to log this film.</p>
+  </div>
+  {% endif %}
+
+  <h2 style="font-family:'Playfair Display',serif;font-size:19px;margin-bottom:16px;color:var(--white)">
+    Reviews <span style="color:var(--muted);font-size:14px;font-weight:400">({{ reviews|length }})</span>
+  </h2>
+  {% if reviews %}
+    {% for r in reviews %}
+    <div class="review-card">
+      <div class="reviewer">{{ r[0] }}</div>
+      <div class="review-stars">
+        {% if r[1] and r[1]|int > 0 %}
+          {% for i in range(r[1]|int) %}★{% endfor %}{% for i in range(5-r[1]|int) %}☆{% endfor %}
+          <span style="color:var(--muted);font-size:11px;margin-left:5px">{{ r[1] }}/5</span>
+        {% else %}<span style="color:var(--muted);font-size:12px">No rating</span>{% endif %}
+      </div>
+      {% if r[2] %}<div class="review-text">{{ r[2] }}</div>{% endif %}
+      {% if r[3] %}<div class="review-date">{{ r[3][:10] }}</div>{% endif %}
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state"><div class="empty-icon">🎞</div><h3>No reviews yet</h3><p>Be the first.</p></div>
+  {% endif %}
+</div>
+<script src="/static/script.js"></script>
+</body></html>

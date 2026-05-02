@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>My Stats — Mini Letterboxd</title>
+<link rel="stylesheet" href="/static/style.css">
+<script>const t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t);</script>
+</head>
+<body>
+<header>
+  <a href="/" class="logo">🎬 Mini<span>Letterboxd</span></a>
+  <nav>
+    <a href="/">Home</a><a href="/myreviews">Diary</a><a href="/watchlist">Watchlist</a>
+    <a href="/analytics" class="active">Stats</a>
+    <a href="/profile" class="nav-avatar" style="background:{{ user_data.avatar_color or '#e8a020' }}">
+      {{ session.user[0].upper() }}</a>
+    <a href="/logout">Logout</a>
+    <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()">☀️</button>
+  </nav>
+</header>
+
+<div class="analytics-page">
+  <h1>Your Stats</h1>
+  <p class="sub">A look at your watching habits, {{ session.user }}.</p>
+
+  <!-- STAT CARDS -->
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-num">{{ total_watched }}</div>
+      <div class="stat-label">Films Logged</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">{{ watchlist_count }}</div>
+      <div class="stat-label">In Watchlist</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">{{ avg_rating }}</div>
+      <div class="stat-label">Avg Rating</div>
+    </div>
+  </div>
+
+  <!-- RATING DISTRIBUTION BAR CHART -->
+  <div class="chart-card">
+    <h3>⭐ Rating Distribution</h3>
+    <div class="bar-chart" id="rating-chart"></div>
+    <p style="font-size:12px;color:var(--muted);margin-top:30px">Hover over a bar to see the count</p>
+  </div>
+
+  <!-- TOP GENRES -->
+  <div class="chart-card">
+    <h3>🎭 Your Top Genres</h3>
+    <div id="genre-chart"></div>
+  </div>
+</div>
+
+<script src="/static/script.js"></script>
+<script>
+const ratingDist = {{ rating_dist|safe }};
+const topGenres  = {{ top_genres|safe }};
+
+// Build rating bar chart
+(function() {
+  const chart  = document.getElementById('rating-chart');
+  const labels = { 0:'Unrated', 1:'1★', 2:'2★', 3:'3★', 4:'4★', 5:'5★' };
+  const values = Object.values(ratingDist);
+  const maxVal = Math.max(...values, 1);
+
+  Object.entries(ratingDist).forEach(([star, count]) => {
+    const pct  = (count / maxVal) * 100;
+    const wrap = document.createElement('div');
+    wrap.className = 'bar-wrap';
+
+    const tooltip = `${count} film${count !== 1 ? 's' : ''} rated ${star == 0 ? 'without rating' : star + '★'}`;
+
+    wrap.innerHTML = `
+      <div class="bar-value">${count}</div>
+      <div class="bar" style="height:${Math.max(pct,3)}%"></div>
+      <div class="bar-tooltip">${tooltip}</div>
+      <div class="bar-label">${labels[star]}</div>`;
+
+    // long-press / hold support
+    let pressTimer;
+    wrap.addEventListener('mousedown', () => {
+      pressTimer = setTimeout(() => showToast(tooltip, 'success'), 400);
+    });
+    wrap.addEventListener('mouseup',   () => clearTimeout(pressTimer));
+    wrap.addEventListener('mouseleave',() => clearTimeout(pressTimer));
+    // touch
+    wrap.addEventListener('touchstart', () => { pressTimer = setTimeout(() => showToast(tooltip,'success'), 500); });
+    wrap.addEventListener('touchend',   () => clearTimeout(pressTimer));
+
+    chart.appendChild(wrap);
+  });
+})();
+
+// Build genre chart
+(function() {
+  const el  = document.getElementById('genre-chart');
+  if (!topGenres.length) { el.innerHTML = '<p style="color:var(--muted);font-size:14px">No genre data yet.</p>'; return; }
+  const max = topGenres[0][1];
+  el.innerHTML = topGenres.map(([genre, count]) => `
+    <div class="genre-row">
+      <div class="genre-name">${genre}</div>
+      <div class="genre-bar-bg">
+        <div class="genre-bar-fill" style="width:${(count/max)*100}%"></div>
+      </div>
+      <div class="genre-count">${count}</div>
+    </div>`).join('');
+})();
+</script>
+</body></html>

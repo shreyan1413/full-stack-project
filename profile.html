@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Profile — Mini Letterboxd</title>
+<link rel="stylesheet" href="/static/style.css">
+<script>const t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t);</script>
+</head>
+<body>
+<header>
+  <a href="/" class="logo">🎬 Mini<span>Letterboxd</span></a>
+  <nav>
+    <a href="/">Home</a><a href="/myreviews">Diary</a><a href="/watchlist">Watchlist</a>
+    <a href="/analytics">Stats</a>
+    <a href="/profile" class="nav-avatar active" style="background:{{ user_data.avatar_color or '#e8a020' }}">
+      {{ session.user[0].upper() }}</a>
+    <a href="/logout">Logout</a>
+    <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()">☀️</button>
+  </nav>
+</header>
+
+<div class="profile-page">
+  <div class="profile-avatar-ring" id="avatar-ring" style="background:{{ user_data.avatar_color or '#e8a020' }}">
+    {{ session.user[0].upper() }}
+  </div>
+  <h1>{{ session.user }}</h1>
+  <p class="sub">Manage your profile and preferences.</p>
+
+  <form onsubmit="saveProfile(event)">
+    <div class="form-group">
+      <label>Bio</label>
+      <textarea name="bio" rows="3" placeholder="Tell people about your taste in films…">{{ user_data.bio or '' }}</textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Avatar Colour</label>
+      <div class="color-swatches">
+        {% set colors = ['#e8a020','#e74c3c','#9b59b6','#2ecc71','#3498db','#e91e63','#00bcd4','#ff5722'] %}
+        {% for c in colors %}
+        <div class="swatch {% if (user_data.avatar_color or '#e8a020') == c %}active{% endif %}"
+             style="background:{{ c }}" onclick="selectSwatch(this,'{{ c }}')"></div>
+        {% endfor %}
+      </div>
+      <input type="hidden" name="avatar_color" id="avatar_color" value="{{ user_data.avatar_color or '#e8a020' }}">
+    </div>
+
+    <div class="danger-zone">
+      <h3>Change Password</h3>
+      <div class="form-group">
+        <label>New Password <span style="color:var(--muted)">(leave blank to keep current)</span></label>
+        <input type="password" name="new_password" placeholder="••••••••">
+      </div>
+    </div>
+
+    <button type="submit" class="save-btn">Save Changes</button>
+  </form>
+
+  <div style="margin-top:32px;padding-top:20px;border-top:1px solid var(--border)">
+    <p style="font-size:13px;color:var(--muted)">
+      <a href="/analytics" style="color:var(--amber);text-decoration:none">→ View your stats</a> &nbsp;·&nbsp;
+      <a href="/myreviews" style="color:var(--amber);text-decoration:none">→ Your diary</a>
+    </p>
+  </div>
+</div>
+
+<script src="/static/script.js"></script>
+</body></html>

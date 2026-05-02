@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Mini Letterboxd</title>
+<link rel="stylesheet" href="/static/style.css">
+<script>const t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t);</script>
+<style>
+.sk-card{background:var(--surface);border-radius:12px;overflow:hidden;border:1px solid var(--border)}
+.sk-poster{height:265px;background:linear-gradient(90deg,var(--surface) 25%,var(--surface2) 50%,var(--surface) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite}
+.sk-line{height:12px;margin:10px 12px 6px;border-radius:6px;background:linear-gradient(90deg,var(--surface) 25%,var(--surface2) 50%,var(--surface) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite}
+.sk-line.s{width:55%;margin-top:0}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.sec-error{color:var(--muted);font-size:13px;padding:10px 0}
+</style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo">🎬 Mini<span>Letterboxd</span></a>
+  <nav>
+    <a href="/" class="active">Home</a>
+    <a href="/advanced-search">Search</a>
+    <a href="/myreviews">Diary</a>
+    <a href="/watchlist">Watchlist</a>
+    <a href="/analytics">Stats</a>
+    {% if session.user %}
+      <a href="/profile" class="nav-avatar" style="background:{{ user_data.avatar_color or '#e8a020' }}">{{ session.user[0].upper() }}</a>
+      <a href="/logout">Logout</a>
+    {% else %}
+      <a href="/login">Login</a>
+      <a href="/register" class="nav-cta">Register</a>
+    {% endif %}
+    <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()">☀️</button>
+  </nav>
+</header>
+
+<div class="hero">
+  <h2>Track films you've watched.<br><em>Discover what's next.</em></h2>
+  <p>Log films, write reviews, and find movies made for you.</p>
+  <div class="search-wrap">
+    <input type="text" id="search" placeholder="Search any film…" onkeyup="searchMovies()" autocomplete="off">
+    <span class="search-icon">🔍</span>
+  </div>
+</div>
+
+<div id="results" class="section"></div>
+
+{% if session.user %}
+<div class="section" id="section-recs" style="display:none">
+  <div class="section-header">
+    <div class="section-title"><span class="icon">🎯</span> Recommended for You</div>
+    <span class="section-badge">Based on your taste</span>
+  </div>
+  <div class="movies" id="grid-recs"></div>
+</div>
+{% endif %}
+
+<!-- IMDB TOP 20 -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-title"><span class="icon">⭐</span> IMDB Top 20</div>
+    <button class="see-more-btn" id="btn-showall" onclick="showAll()" style="display:none">Show All 20 ▼</button>
+  </div>
+  <div id="grid-top10" class="movies large"></div>
+  <div id="grid-top20" class="movies large" style="display:none;margin-top:18px"></div>
+</div>
+
+<!-- TRENDING -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-title"><span class="icon">🔥</span> Trending This Week</div>
+    <span class="section-badge">Live · TMDB</span>
+  </div>
+  <div id="grid-trending" class="movies"></div>
+</div>
+
+<!-- UPCOMING -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-title"><span class="icon">🗓️</span> Upcoming Films</div>
+    <span class="section-badge">Coming Soon</span>
+  </div>
+  <div id="grid-upcoming" class="movies"></div>
+</div>
+
+<!-- NOW PLAYING -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-title"><span class="icon">🎟️</span> Now Playing</div>
+    <span class="section-badge">In Cinemas</span>
+  </div>
+  <div id="grid-now" class="movies"></div>
+</div>
+
+<script src="/static/script.js"></script>
+<script>
+// ── SKELETONS ─────────────────────────────────────────────────────────────────
+function skels(n) {
+  return Array(n).fill('<div class="sk-card"><div class="sk-poster"></div><div class="sk-line"></div><div class="sk-line s"></div></div>').join('');
+}
+['grid-top10','grid-trending','grid-upcoming','grid-now'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = skels(id === 'grid-top10' ? 10 : 8);
+});
+
+// ── CARD HTML ─────────────────────────────────────────────────────────────────
+function card(m, rank, ribbon, showForm) {
+  const poster = (m.Poster && m.Poster !== 'N/A') ? m.Poster : '/static/noimage.png';
+  const rating = (m.imdbRating && m.imdbRating !== 'N/A') ? `<div class="card-rating">⭐ ${m.imdbRating}</div>` : '';
+  const rankEl = rank   ? `<div class="card-rank">${rank}</div>` : '';
+  const ribEl  = ribbon ? `<div class="upcoming-ribbon">${ribbon}</div>` : '';
+  const safeT  = (m.Title||'').replace(/'/g,"&#39;").replace(/"/g,'&quot;');
+  const genre1 = m.Genre ? m.Genre.split(',')[0].trim() : '';
+  return `
+  <div class="card">
+    <div class="card-poster" onclick="window.location='/movie/${m.imdbID}'" style="cursor:pointer">
+      ${rankEl}${ribEl}${rating}
+      <img src="${poster}" alt="${safeT}" loading="lazy">
+      <div class="card-overlay"><div class="overlay-actions">
+        <a href="/movie/${m.imdbID}" class="overlay-btn primary">Details</a>
+        <button class="overlay-btn secondary"
+          onclick="event.stopPropagation();addToWatchlist('${m.imdbID}','${safeT}','${poster}','${m.Year}',this)">
+          + Watch</button>
+      </div></div>
+    </div>
+    <div class="card-info">
+      <div class="card-title">${m.Title}</div>
+      <div class="card-meta">${m.Year||''}${genre1?' · '+genre1:''}</div>
+    </div>
+    ${showForm ? `<div class="review-form"><form onsubmit="submitReview(event,this)">
+      <input type="hidden" name="movie_id"     value="${m.imdbID}">
+      <input type="hidden" name="movie_title"  value="${safeT}">
+      <input type="hidden" name="movie_poster" value="${poster}">
+      <input type="hidden" name="movie_genre"  value="${m.Genre||''}">
+      <div class="stars" data-selected="0"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div>
+      <input type="hidden" name="rating" value="0">
+      <input type="text" name="review" placeholder="Quick thought…">
+      <button type="submit" class="submit-btn">Log Film</button>
+      <button type="button" class="log-only-btn" onclick="logOnly(this)">Just log it</button>
+    </form></div>` : ''}
+  </div>`;
+}
+
+function renderCards(movies, gridId, opts={}) {
+  const el = document.getElementById(gridId);
+  if (!el) return;
+  if (!movies.length) { el.innerHTML = '<p class="sec-error">Nothing to show right now.</p>'; return; }
+  el.innerHTML = movies.map((m,i) => card(m, opts.ranked ? (opts.startRank||1)+i : null, opts.ribbon||null, !!opts.showForm)).join('');
+  attachStarListeners();
+}
+
+// ── LOAD SECTION ──────────────────────────────────────────────────────────────
+async function loadSection(url, render) {
+  try {
+    const res  = await fetch(url);
+    if (!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    render(data);
+  } catch(e) {
+    console.error(url, e);
+  }
+}
+
+// ── TOP 20: first 10 visible, 11-20 hidden behind button ─────────────────────
+loadSection('/api/section/top_rated', data => {
+  if (!data.length) return;
+  renderCards(data.slice(0,10),  'grid-top10', { ranked:true, startRank:1,  showForm:false });
+  renderCards(data.slice(10,20), 'grid-top20', { ranked:true, startRank:11, showForm:false });
+  if (data.length > 10) document.getElementById('btn-showall').style.display = 'inline-block';
+});
+
+let top20open = false;
+function showAll() {
+  top20open = !top20open;
+  document.getElementById('grid-top20').style.display = top20open ? 'grid' : 'none';
+  document.getElementById('btn-showall').textContent   = top20open ? 'Hide #11–20 ▲' : 'Show All 20 ▼';
+}
+
+// ── OTHER SECTIONS ────────────────────────────────────────────────────────────
+loadSection('/api/section/trending',    data => renderCards(data, 'grid-trending', { showForm:true }));
+loadSection('/api/section/upcoming',    data => renderCards(data, 'grid-upcoming', { ribbon:'SOON', showForm:false }));
+loadSection('/api/section/now_playing', data => renderCards(data, 'grid-now',      { showForm:true }));
+
+{% if session.user %}
+loadSection('/api/section/recommendations', data => {
+  if (!data.length) return;
+  renderCards(data, 'grid-recs', { showForm:false });
+  document.getElementById('section-recs').style.display = 'block';
+});
+{% endif %}
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head><meta charset="UTF-8"><title>Login — Mini Letterboxd</title>
+<link rel="stylesheet" href="/static/style.css">
+<script>const t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t);</script>
+</head>
+<body>
+<header><a href="/" class="logo">🎬 Mini<span>Letterboxd</span></a>
+  <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" style="margin-left:auto">☀️</button>
+</header>
+<div class="auth-page">
+  <div class="auth-box">
+    <h1>Welcome back</h1><p>Sign in to your film diary.</p>
+    {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
+    <form method="POST">
+      <div class="auth-field"><label>Username</label><input type="text" name="username" required autofocus></div>
+      <div class="auth-field"><label>Password</label><input type="password" name="password" required></div>
+      <button type="submit" class="auth-submit">Sign In</button>
+    </form>
+    <p class="auth-link">No account? <a href="/register">Create one →</a></p>
+  </div>
+</div>
+<script src="/static/script.js"></script>
+</body></html>
